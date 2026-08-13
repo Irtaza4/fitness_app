@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
 class AppHeader extends StatelessWidget {
+  final bool showBackButton;
   final VoidCallback? onBack;
   final VoidCallback? onCalendar;
   final VoidCallback? onProfile;
 
   const AppHeader({
     Key? key,
+    this.showBackButton = true,
     this.onBack,
     this.onCalendar,
     this.onProfile,
@@ -20,41 +22,96 @@ class AppHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Back Circle Button
-          GestureDetector(
-            onTap: onBack ?? () {
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              }
-            },
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+          // Left Button: Back Circle or Notification Bell (Home)
+          showBackButton
+              ? GestureDetector(
+                  onTap: onBack ?? () {
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: AppColors.primaryText,
+                      size: 20,
+                    ),
                   ),
-                ],
-              ),
-              child: const Icon(
-                Icons.arrow_back_rounded,
-                color: AppColors.primaryText,
-                size: 20,
-              ),
-            ),
-          ),
+                )
+              : GestureDetector(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Notifications: All connected devices synced.'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const Icon(
+                          Icons.notifications_none_rounded,
+                          color: AppColors.primaryText,
+                          size: 20,
+                        ),
+                        Positioned(
+                          top: 12,
+                          right: 12,
+                          child: Container(
+                            width: 7,
+                            height: 7,
+                            decoration: const BoxDecoration(
+                              color: AppColors.activeGreen,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
           // Right Header Buttons (Calendar + Profile Avatar)
           Row(
             children: [
               // Calendar Button
               GestureDetector(
-                onTap: onCalendar,
+                onTap: onCalendar ?? () {
+                  showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime(2025),
+                    lastDate: DateTime(2027),
+                  );
+                },
                 child: Container(
                   width: 44,
                   height: 44,

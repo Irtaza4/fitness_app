@@ -19,7 +19,6 @@ class ThreeDModelViewer extends StatefulWidget {
 class _ThreeDModelViewerState extends State<ThreeDModelViewer> with SingleTickerProviderStateMixin {
   double _yaw = 0.4;   // Rotation Y
   double _pitch = 0.2; // Rotation X
-  bool _isAssembled = false;
 
   late AnimationController _animController;
   late Animation<double> _assemblyAnimation;
@@ -47,9 +46,7 @@ class _ThreeDModelViewerState extends State<ThreeDModelViewer> with SingleTicker
 
   void _triggerAssemblySequence() {
     _animController.reset();
-    _animController.forward().then((_) {
-      setState(() => _isAssembled = true);
-    });
+    _animController.forward();
   }
 
   @override
@@ -74,52 +71,13 @@ class _ThreeDModelViewerState extends State<ThreeDModelViewer> with SingleTicker
       child: SizedBox(
         height: widget.height,
         width: double.infinity,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Custom 3D Canvas Rendering Exploded vs Assembled Product
-            CustomPaint(
-              size: Size(double.infinity, widget.height),
-              painter: CinematicProduct3DPainter(
-                yaw: _yaw,
-                pitch: _pitch,
-                assemblyProgress: assemblyProgress,
-              ),
-            ),
-
-            // Interactive Badge
-            Positioned(
-              bottom: 4,
-              child: GestureDetector(
-                onTap: _triggerAssemblySequence,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.auto_awesome_rounded, size: 13, color: Colors.white),
-                      const SizedBox(width: 5),
-                      Text(
-                        _animController.isAnimating
-                            ? 'Assembling product...'
-                            : '3D Interactive • Tap to replay assembly',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
+        child: CustomPaint(
+          size: Size(double.infinity, widget.height),
+          painter: CinematicProduct3DPainter(
+            yaw: _yaw,
+            pitch: _pitch,
+            assemblyProgress: assemblyProgress,
+          ),
         ),
       ),
     );
