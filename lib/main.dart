@@ -1,121 +1,268 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'theme/app_colors.dart';
+import 'screens/home_screen.dart';
+import 'screens/statistics_screen.dart';
+import 'screens/devices_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/workout_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const FitnessApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class FitnessApp extends StatelessWidget {
+  const FitnessApp({Key? key}) : super(key: key);
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Fitness Tracking App',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        scaffoldBackgroundColor: AppColors.background,
+        primaryColor: AppColors.darkCard,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.darkCard,
+          background: AppColors.background,
+        ),
+        textTheme: GoogleFonts.interTextTheme(),
+        useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MainNavigationShell(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class MainNavigationShell extends StatefulWidget {
+  const MainNavigationShell({Key? key}) : super(key: key);
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<MainNavigationShell> createState() => _MainNavigationShellState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _MainNavigationShellState extends State<MainNavigationShell> {
+  int _currentTabIndex = 0;
+  int _currentDeviceLevel = 12;
+  bool _isReelFrameEnabled = false;
 
-  void _incrementCounter() {
+  void _onTabTapped(int index) {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _currentTabIndex = index;
     });
+  }
+
+  void _startWorkoutFromDevice(int level) {
+    setState(() => _currentDeviceLevel = level);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WorkoutScreen(resistanceLevel: _currentDeviceLevel),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+    final List<Widget> pages = [
+      HomeScreen(
+        onNavigateTab: _onTabTapped,
+        onStartWorkout: _startWorkoutFromDevice,
+        currentLevel: _currentDeviceLevel,
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+      const StatisticsScreen(),
+      DevicesScreen(
+        onStartWorkout: _startWorkoutFromDevice,
+        currentLevel: _currentDeviceLevel,
+      ),
+      const ProfileScreen(),
+    ];
+
+    Widget mainContent = Scaffold(
+      backgroundColor: AppColors.background,
+      body: IndexedStack(
+        index: _currentTabIndex,
+        children: pages,
+      ),
+      bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+
+    // If Reel presentation mode is enabled, wrap the mobile screen inside an iPhone 16 Pro mockup frame!
+    if (_isReelFrameEnabled) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF0F0F11),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF1C1C1E),
+          elevation: 0,
+          title: Text(
+            'Instagram Reel Mode (iPhone Frame)',
+            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+          ),
+          actions: [
+            TextButton.icon(
+              onPressed: () => setState(() => _isReelFrameEnabled = false),
+              icon: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 18),
+              label: Text('Full Screen', style: GoogleFonts.inter(color: Colors.white, fontSize: 12)),
             ),
           ],
         ),
+        body: Center(
+          child: Container(
+            width: 390,
+            height: 820,
+            margin: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(48),
+              border: Border.all(color: const Color(0xFF2C2C2E), width: 10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.6),
+                  blurRadius: 40,
+                  spreadRadius: 4,
+                  offset: const Offset(0, 16),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(38),
+              child: Stack(
+                children: [
+                  mainContent,
+
+                  // Dynamic Island Top Pill
+                  Positioned(
+                    top: 10,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        width: 110,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Standard Full Screen View with a floating top toggle for Insta Reel frame
+    return Stack(
+      children: [
+        mainContent,
+
+        // Floating Reel Frame Mode Toggle Button
+        Positioned(
+          top: 48,
+          right: 16,
+          child: GestureDetector(
+            onTap: () => setState(() => _isReelFrameEnabled = !_isReelFrameEnabled),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.darkCard.withOpacity(0.85),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.2)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.phone_iphone_rounded, color: Colors.white, size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Reel Frame',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBottomNavigationBar() {
+    return Container(
+      height: 78,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(color: AppColors.border, width: 1),
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildNavItem(index: 0, icon: Icons.grid_view_rounded, label: 'Home'),
+          _buildNavItem(index: 1, icon: Icons.bar_chart_rounded, label: 'Statistics'),
+          _buildNavItem(index: 2, icon: Icons.devices_rounded, label: 'Devices'),
+          _buildNavItem(index: 3, icon: Icons.person_rounded, label: 'Profile'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required String label,
+  }) {
+    final isSelected = index == _currentTabIndex;
+
+    return GestureDetector(
+      onTap: () => _onTabTapped(index),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(
+          horizontal: isSelected ? 16 : 12,
+          vertical: 8,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.darkCard : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : AppColors.secondaryText,
+              size: 20,
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
