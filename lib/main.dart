@@ -44,10 +44,17 @@ class MainNavigationShell extends StatefulWidget {
 class _MainNavigationShellState extends State<MainNavigationShell> {
   int _currentTabIndex = 0;
   int _currentDeviceLevel = 12;
+  bool _isDarkMode = false;
 
   void _onTabTapped(int index) {
     setState(() {
       _currentTabIndex = index;
+    });
+  }
+
+  void _toggleDarkMode(bool val) {
+    setState(() {
+      _isDarkMode = val;
     });
   }
 
@@ -63,33 +70,42 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
   @override
   Widget build(BuildContext context) {
+    final backgroundColor = _isDarkMode ? const Color(0xFF0E0E10) : AppColors.background;
+    final navBarColor = _isDarkMode ? const Color(0xFF1B1B1E) : Colors.white;
+    final navBarBorderColor = _isDarkMode ? Colors.white.withValues(alpha: 0.1) : AppColors.border;
+
     final List<Widget> pages = [
       HomeScreen(
         onNavigateTab: _onTabTapped,
         onStartWorkout: _startWorkoutFromDevice,
         currentLevel: _currentDeviceLevel,
+        isDarkMode: _isDarkMode,
       ),
       const StatisticsScreen(),
       DevicesScreen(
         onStartWorkout: _startWorkoutFromDevice,
         currentLevel: _currentDeviceLevel,
       ),
-      const ProfileScreen(),
+      ProfileScreen(
+        isDarkMode: _isDarkMode,
+        onToggleDarkMode: _toggleDarkMode,
+      ),
     ];
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: backgroundColor,
       body: IndexedStack(
         index: _currentTabIndex,
         children: pages,
       ),
-      bottomNavigationBar: Container(
+      bottomNavigationBar: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
         height: 78,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: navBarColor,
           border: Border(
-            top: BorderSide(color: AppColors.border, width: 1),
+            top: BorderSide(color: navBarBorderColor, width: 1),
           ),
         ),
         child: Row(
@@ -111,18 +127,24 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
     required String label,
   }) {
     final isSelected = index == _currentTabIndex;
+    final activePillColor = _isDarkMode
+        ? (isSelected ? AppColors.mint : Colors.transparent)
+        : (isSelected ? AppColors.darkCard : Colors.transparent);
+    final activeTextColor = _isDarkMode
+        ? (isSelected ? AppColors.darkCard : Colors.white.withValues(alpha: 0.6))
+        : (isSelected ? Colors.white : AppColors.secondaryText);
 
     return GestureDetector(
       onTap: () => _onTabTapped(index),
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 250),
         padding: EdgeInsets.symmetric(
           horizontal: isSelected ? 16 : 12,
           vertical: 8,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.darkCard : Colors.transparent,
+          color: activePillColor,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -130,7 +152,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           children: [
             Icon(
               icon,
-              color: isSelected ? Colors.white : AppColors.secondaryText,
+              color: activeTextColor,
               size: 20,
             ),
             if (isSelected) ...[
@@ -138,7 +160,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
               Text(
                 label,
                 style: GoogleFonts.outfit(
-                  color: Colors.white,
+                  color: activeTextColor,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                 ),

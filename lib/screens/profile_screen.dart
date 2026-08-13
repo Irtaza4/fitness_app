@@ -3,7 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  final bool isDarkMode;
+  final ValueChanged<bool>? onToggleDarkMode;
+
+  const ProfileScreen({
+    Key? key,
+    this.isDarkMode = false,
+    this.onToggleDarkMode,
+  }) : super(key: key);
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -12,12 +19,18 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _notificationsEnabled = true;
   String _selectedUnit = 'Metric (kg, cm)';
-  bool _darkMode = false;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = widget.isDarkMode;
+    final bgColor = isDark ? const Color(0xFF0E0E10) : AppColors.background;
+    final primaryTextColor = isDark ? Colors.white : AppColors.primaryText;
+    final secondaryTextColor = isDark ? Colors.white.withValues(alpha: 0.6) : AppColors.secondaryText;
+    final cardBgColor = isDark ? const Color(0xFF1B1B1E) : Colors.white;
+    final cardBorderColor = isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.border;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: bgColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
@@ -30,19 +43,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 32,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.primaryText,
+                  color: primaryTextColor,
                   letterSpacing: -0.8,
                 ),
               ),
               const SizedBox(height: 20),
 
-              // Profile Card Header
+              // Profile Header Hero Card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
                   color: AppColors.darkCard,
                   borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
@@ -101,7 +121,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
 
-                    // Edit Profile Button (Interactive!)
+                    // Edit Profile Button
                     GestureDetector(
                       onTap: _showEditProfileSheet,
                       child: Container(
@@ -124,19 +144,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.primaryText,
+                  color: primaryTextColor,
                 ),
               ),
               const SizedBox(height: 14),
 
-              // 2x2 Personal Metrics Grid (All Interactive!)
+              // 2x2 Personal Metrics Grid
               Row(
                 children: [
                   Expanded(
                     child: _buildPersonalMetricCard(
                       label: 'Weight',
                       value: '72 kg',
-                      backgroundColor: Colors.white,
+                      cardBgColor: cardBgColor,
+                      borderColor: cardBorderColor,
+                      textColor: primaryTextColor,
+                      subtextColor: secondaryTextColor,
                       onTap: () => _showMetricEditDialog('Weight', '72 kg'),
                     ),
                   ),
@@ -145,7 +168,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: _buildPersonalMetricCard(
                       label: 'Height',
                       value: '180 cm',
-                      backgroundColor: Colors.white,
+                      cardBgColor: cardBgColor,
+                      borderColor: cardBorderColor,
+                      textColor: primaryTextColor,
+                      subtextColor: secondaryTextColor,
                       onTap: () => _showMetricEditDialog('Height', '180 cm'),
                     ),
                   ),
@@ -158,7 +184,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: _buildPersonalMetricCard(
                       label: 'Age',
                       value: '28 yrs',
-                      backgroundColor: Colors.white,
+                      cardBgColor: cardBgColor,
+                      borderColor: cardBorderColor,
+                      textColor: primaryTextColor,
+                      subtextColor: secondaryTextColor,
                       onTap: () => _showMetricEditDialog('Age', '28 yrs'),
                     ),
                   ),
@@ -167,7 +196,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: _buildPersonalMetricCard(
                       label: 'Daily Goal',
                       value: '10,000 steps',
-                      backgroundColor: AppColors.softYellow,
+                      cardBgColor: isDark ? const Color(0xFF2A271B) : AppColors.softYellow,
+                      borderColor: isDark ? AppColors.softYellow.withValues(alpha: 0.3) : Colors.transparent,
+                      textColor: isDark ? AppColors.softYellow : AppColors.primaryText,
+                      subtextColor: isDark ? AppColors.softYellow.withValues(alpha: 0.7) : AppColors.secondaryText,
                       onTap: () => _showMetricEditDialog('Daily Goal', '10,000 steps'),
                     ),
                   ),
@@ -181,82 +213,95 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.primaryText,
+                  color: primaryTextColor,
                 ),
               ),
               const SizedBox(height: 14),
 
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cardBgColor,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: cardBorderColor),
                 ),
                 child: Column(
                   children: [
-                    // Notifications Toggle Switch
+                    // Notifications Switch
                     ListTile(
-                      leading: const Icon(Icons.notifications_rounded, color: AppColors.darkCard, size: 22),
+                      leading: Icon(Icons.notifications_rounded, color: isDark ? AppColors.mint : AppColors.darkCard, size: 22),
                       title: Text(
                         'Notifications',
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.primaryText),
+                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: primaryTextColor),
                       ),
                       trailing: Switch(
                         value: _notificationsEnabled,
-                        activeColor: AppColors.darkCard,
+                        activeThumbColor: isDark ? AppColors.mint : AppColors.darkCard,
                         onChanged: (val) {
                           setState(() => _notificationsEnabled = val);
                         },
                       ),
                     ),
-                    const Divider(height: 1, color: AppColors.border),
+                    Divider(height: 1, color: cardBorderColor),
 
-                    // Connected Devices Modal
+                    // Connected Devices
                     _buildSettingsTile(
                       icon: Icons.bluetooth_rounded,
                       title: 'Connected Devices',
+                      textColor: primaryTextColor,
+                      isDark: isDark,
                       onTap: _showConnectedDevicesDialog,
                     ),
-                    const Divider(height: 1, color: AppColors.border),
+                    Divider(height: 1, color: cardBorderColor),
 
-                    // Units Picker
+                    // Units & Measurements
                     _buildSettingsTile(
                       icon: Icons.straighten_rounded,
                       title: 'Units & Measurements',
                       subtitle: _selectedUnit,
+                      textColor: primaryTextColor,
+                      subtextColor: secondaryTextColor,
+                      isDark: isDark,
                       onTap: _showUnitsPickerSheet,
                     ),
-                    const Divider(height: 1, color: AppColors.border),
+                    Divider(height: 1, color: cardBorderColor),
 
                     // Privacy & Security
                     _buildSettingsTile(
                       icon: Icons.lock_rounded,
                       title: 'Privacy & Security',
+                      textColor: primaryTextColor,
+                      isDark: isDark,
                       onTap: _showPrivacyDialog,
                     ),
-                    const Divider(height: 1, color: AppColors.border),
+                    Divider(height: 1, color: cardBorderColor),
 
-                    // Appearance Theme Toggle
+                    // Dark Appearance Toggle Switch (UTILIZING DARK MODE TOGGLE!)
                     ListTile(
-                      leading: const Icon(Icons.palette_rounded, color: AppColors.darkCard, size: 22),
+                      leading: Icon(Icons.palette_rounded, color: isDark ? AppColors.mint : AppColors.darkCard, size: 22),
                       title: Text(
                         'Dark Appearance',
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.primaryText),
+                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: primaryTextColor),
+                      ),
+                      subtitle: Text(
+                        isDark ? 'Dark theme active' : 'Light theme active',
+                        style: GoogleFonts.inter(fontSize: 12, color: secondaryTextColor),
                       ),
                       trailing: Switch(
-                        value: _darkMode,
-                        activeColor: AppColors.darkCard,
+                        value: widget.isDarkMode,
+                        activeThumbColor: AppColors.mint,
                         onChanged: (val) {
-                          setState(() => _darkMode = val);
+                          widget.onToggleDarkMode?.call(val);
                         },
                       ),
                     ),
-                    const Divider(height: 1, color: AppColors.border),
+                    Divider(height: 1, color: cardBorderColor),
 
                     // Help & Support
                     _buildSettingsTile(
                       icon: Icons.help_outline_rounded,
                       title: 'Help & Support',
+                      textColor: primaryTextColor,
+                      isDark: isDark,
                       onTap: _showHelpSupportSheet,
                     ),
                   ],
@@ -273,19 +318,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildPersonalMetricCard({
     required String label,
     required String value,
-    required Color backgroundColor,
+    required Color cardBgColor,
+    required Color borderColor,
+    required Color textColor,
+    required Color subtextColor,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: backgroundColor,
+          color: cardBgColor,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: backgroundColor == Colors.white ? AppColors.border : Colors.transparent,
-          ),
+          border: Border.all(color: borderColor),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -295,7 +342,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: GoogleFonts.outfit(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
-                color: AppColors.primaryText,
+                color: textColor,
               ),
             ),
             const SizedBox(height: 2),
@@ -307,10 +354,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.secondaryText,
+                    color: subtextColor,
                   ),
                 ),
-                const Icon(Icons.edit_outlined, size: 12, color: AppColors.secondaryText),
+                Icon(Icons.edit_outlined, size: 12, color: subtextColor),
               ],
             ),
           ],
@@ -323,22 +370,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required IconData icon,
     required String title,
     String? subtitle,
+    required Color textColor,
+    Color? subtextColor,
+    required bool isDark,
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: AppColors.darkCard, size: 22),
+      leading: Icon(icon, color: isDark ? AppColors.mint : AppColors.darkCard, size: 22),
       title: Text(
         title,
         style: GoogleFonts.inter(
           fontSize: 15,
           fontWeight: FontWeight.w600,
-          color: AppColors.primaryText,
+          color: textColor,
         ),
       ),
       subtitle: subtitle != null
-          ? Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: AppColors.secondaryText))
+          ? Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: subtextColor ?? AppColors.secondaryText))
           : null,
-      trailing: const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.secondaryText, size: 14),
+      trailing: Icon(Icons.arrow_forward_ios_rounded, color: subtextColor ?? AppColors.secondaryText, size: 14),
       onTap: onTap,
     );
   }

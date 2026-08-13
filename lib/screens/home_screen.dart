@@ -26,30 +26,52 @@ class HomeScreen extends StatefulWidget {
   final Function(int) onNavigateTab;
   final Function(int) onStartWorkout;
   final int currentLevel;
+  final bool isDarkMode;
 
   const HomeScreen({
     Key? key,
     required this.onNavigateTab,
     required this.onStartWorkout,
     this.currentLevel = 12,
+    this.isDarkMode = false,
   }) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _selectedCategoryIndex = 0; // 0: Connection, 1: Statistics, 2: Shop
   final List<String> _categories = ['Connection', 'Statistics', 'Shop'];
 
   int _activeCardIndex = 0;
   double _dragOffsetY = 0.0;
+  bool _isTransitioning = false;
+  int _transitionDirection = 1; // 1 for next, -1 for prev
+
+  late AnimationController _snapController;
+  late Animation<double> _snapAnimation;
 
   late List<HeroDeviceItem> _heroDevices;
 
   @override
   void initState() {
     super.initState();
+
+    _snapController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    _snapAnimation = CurvedAnimation(
+      parent: _snapController,
+      curve: Curves.fastOutSlowIn,
+    );
+
+    _snapController.addListener(() {
+      if (mounted) setState(() {});
+    });
+
     _heroDevices = [
       HeroDeviceItem(
         title: 'Universal\nFitness\nExpander',
@@ -86,24 +108,60 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ];
   }
 
-  void _cycleNextCard() {
+  @override
+  void dispose() {
+    _snapController.dispose();
+    super.dispose();
+  }
+
+  void _triggerSwoopToNext() {
     setState(() {
-      _activeCardIndex = (_activeCardIndex + 1) % _heroDevices.length;
-      _dragOffsetY = 0.0;
+      _isTransitioning = true;
+      _transitionDirection = 1;
+    });
+
+    _snapController.forward(from: 0.0).then((_) {
+      setState(() {
+        _activeCardIndex = (_activeCardIndex + 1) % _heroDevices.length;
+        _dragOffsetY = 0.0;
+        _isTransitioning = false;
+        _snapController.reset();
+      });
     });
   }
 
-  void _cyclePreviousCard() {
+  void _triggerSwoopToPrevious() {
     setState(() {
-      _activeCardIndex = (_activeCardIndex - 1 + _heroDevices.length) % _heroDevices.length;
-      _dragOffsetY = 0.0;
+      _isTransitioning = true;
+      _transitionDirection = -1;
+    });
+
+    _snapController.forward(from: 0.0).then((_) {
+      setState(() {
+        _activeCardIndex = (_activeCardIndex - 1 + _heroDevices.length) % _heroDevices.length;
+        _dragOffsetY = 0.0;
+        _isTransitioning = false;
+        _snapController.reset();
+      });
+    });
+  }
+
+  void _snapBackToFront() {
+    _snapController.reverse(from: 1.0).then((_) {
+      setState(() {
+        _dragOffsetY = 0.0;
+        _snapController.reset();
+      });
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = widget.isDarkMode;
+    final primaryTextColor = isDark ? Colors.white : AppColors.primaryText;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: isDark ? const Color(0xFF0E0E10) : AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -127,7 +185,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       style: GoogleFonts.outfit(
                         fontSize: 32,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.primaryText,
+                        color: primaryTextColor,
                         height: 1.1,
                         letterSpacing: -0.8,
                       ),
@@ -135,12 +193,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     const SizedBox(height: 16),
 
                     // Category Segmented Control
-                    _buildCategoryPillSelector(),
+                    _buildCategoryPillSelector(isDark),
                     const SizedBox(height: 20),
 
-                    // Interactive 3D Folding Card Stack Deck
+                    // Ultra-Tactile Two-Phase Card Drag & Swoop-In Deck Engine
                     Expanded(
-                      child: _build3DFoldingCardStackDeck(context),
+                      child: _buildTwoPhasePhysicalDragEngine(context, isDark),
                     ),
                   ],
                 ),
@@ -148,17 +206,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
 
             // Floating Bottom Navigation Capsule Bar
-            _buildFloatingBottomBar(context),
+            _buildFloatingBottomBar(context, isDark),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCategoryPillSelector() {
+  Widget _buildCategoryPillSelector(bool isDark) {
     return Row(
       children: List.generate(_categories.length, (index) {
         final isSelected = index == _selectedCategoryIndex;
+        final selectedColor = isDark ? AppColors.mint : AppColors.darkCard;
+        final unselectedColor = isDark ? const Color(0xFF1B1B1E) : Colors.white;
+        final textColor = isSelected
+            ? (isDark ? AppColors.darkCard : Colors.white)
+            : (isDark ? Colors.white.withValues(alpha: 0.7) : AppColors.primaryText);
+
         return Padding(
           padding: const EdgeInsets.only(right: 10.0),
           child: GestureDetector(
@@ -168,15 +232,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               if (index == 2) widget.onNavigateTab(2); // Devices
             },
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
+              duration: const Duration(milliseconds: 250),
               padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.darkCard : Colors.white,
+                color: isSelected ? selectedColor : unselectedColor,
                 borderRadius: BorderRadius.circular(24),
+                border: isDark && !isSelected
+                    ? Border.all(color: Colors.white.withValues(alpha: 0.1))
+                    : null,
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
+                          color: (isDark ? AppColors.mint : Colors.black).withValues(alpha: 0.15),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -188,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                  color: isSelected ? Colors.white : AppColors.primaryText,
+                  color: textColor,
                 ),
               ),
             ),
@@ -198,97 +265,146 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  /// 3D Folding Card Deck Stack Widget
-  Widget _build3DFoldingCardStackDeck(BuildContext context) {
+  /// Two-Phase Physical Drag & Swoop-In Deck Engine
+  Widget _buildTwoPhasePhysicalDragEngine(BuildContext context, bool isDark) {
     final totalCards = _heroDevices.length;
+    final animValue = _snapAnimation.value;
+
+    // Active drag progress (0.0 to 1.0)
+    double dragProgress = 0.0;
+    if (_isTransitioning) {
+      dragProgress = animValue;
+    } else if (_dragOffsetY != 0.0) {
+      dragProgress = (_dragOffsetY.abs() / 150.0).clamp(0.0, 1.0);
+    }
+
+    // RENDER ORDER IN STACK:
+    // WHILE DRAGGING: Card 0 is ON TOP [3, 2, 1, 0] so it stays under your finger!
+    // UPON SWOOP TRANSITION (after drag release): Card 0 swoops under Card 1 -> [0, 3, 2, 1]!
+    List<int> stackRenderOrder;
+    if (_isTransitioning) {
+      stackRenderOrder = [0, 3, 2, 1]; // Swooping behind phase
+    } else {
+      stackRenderOrder = [3, 2, 1, 0]; // Finger holding phase (Card 0 on top!)
+    }
 
     return Column(
       children: [
         Expanded(
           child: GestureDetector(
             onVerticalDragUpdate: (details) {
-              setState(() {
-                _dragOffsetY += details.delta.dy;
-              });
+              if (!_isTransitioning) {
+                setState(() {
+                  _dragOffsetY += details.delta.dy;
+                });
+              }
             },
             onVerticalDragEnd: (details) {
-              if (_dragOffsetY > 60 || details.primaryVelocity! > 250) {
-                _cycleNextCard();
-              } else if (_dragOffsetY < -60 || details.primaryVelocity! < -250) {
-                _cyclePreviousCard();
-              } else {
-                setState(() => _dragOffsetY = 0.0);
+              if (!_isTransitioning) {
+                if (_dragOffsetY > 45 || details.primaryVelocity! > 200) {
+                  _triggerSwoopToNext();
+                } else if (_dragOffsetY < -45 || details.primaryVelocity! < -200) {
+                  _triggerSwoopToPrevious();
+                } else {
+                  _snapBackToFront();
+                }
               }
             },
             child: Stack(
               alignment: Alignment.topCenter,
               clipBehavior: Clip.none,
-              children: List.generate(totalCards, (stackPosition) {
-                // Calculate item index from back to front
-                // stackPosition 0 is bottom/back, stackPosition 3 is top/front card
-                final reverseIndex = (totalCards - 1) - stackPosition;
-                final deviceIndex = (_activeCardIndex + reverseIndex) % totalCards;
+              children: stackRenderOrder.map((depthIndex) {
+                final deviceIndex = (_activeCardIndex + depthIndex) % totalCards;
                 final item = _heroDevices[deviceIndex];
 
-                // Card stacking geometry parameters
-                final isTopCard = reverseIndex == 0;
-                final depthFactor = reverseIndex.toDouble(); // 0 = front, 1, 2, 3 = back cards
+                final isHeldCard = depthIndex == 0;
+                final depthFactor = depthIndex.toDouble();
 
-                // Vertical offset (back cards peek out above front card)
-                double topOffset = (depthFactor * 16.0);
+                // Base Geometry for cards in resting stack
+                double translateY = depthFactor * 18.0;
                 double scale = 1.0 - (depthFactor * 0.06);
                 double opacity = (1.0 - (depthFactor * 0.15)).clamp(0.4, 1.0);
-
-                // Apply 3D Folding transformation on active drag
                 double rotationX = 0.0;
-                double translateY = topOffset;
 
-                if (isTopCard) {
-                  translateY += _dragOffsetY;
-                  rotationX = (_dragOffsetY * 0.0015).clamp(-0.4, 0.4);
+                if (!_isTransitioning) {
+                  // ================= PHASE 1: FINGER DRAGGING =================
+                  if (isHeldCard) {
+                    // Card 0: Stays ON TOP directly under user's finger!
+                    translateY = _dragOffsetY;
+                    rotationX = (_dragOffsetY * 0.0014).clamp(-0.35, 0.35);
+                    scale = 1.0 - (dragProgress * 0.04);
+                  } else {
+                    // Cards 1, 2, 3: Deck behind dynamically OPENS UP SPACE as you drag!
+                    // Gap opens from 18px to 32px per card!
+                    final slotGapExpansion = dragProgress * 14.0;
+                    translateY = (depthFactor * 18.0) - slotGapExpansion;
+                    scale = (1.0 - (depthFactor * 0.06)) + (dragProgress * 0.03);
+                  }
+                } else {
+                  // ================= PHASE 2: SWOOP INTO BACK SLOT =================
+                  if (isHeldCard) {
+                    // Held Card swoops down & tucks into the open slot at back of stack
+                    final initialDrag = _dragOffsetY;
+                    translateY = initialDrag + (animValue * (54.0 - initialDrag));
+                    rotationX = ((1.0 - animValue) * (initialDrag * 0.0014)).clamp(-0.4, 0.4);
+                    scale = 1.0 - (animValue * 0.18); // Shrinks to back slot size 0.82
+                    opacity = (1.0 - (animValue * 0.4)).clamp(0.4, 1.0);
+                  } else if (depthIndex == 1) {
+                    // Next Card physically swells FORWARD into hero position!
+                    translateY = (1.0 - animValue) * 18.0;
+                    scale = 0.94 + (animValue * 0.06);
+                    opacity = 0.85 + (animValue * 0.15);
+                  } else if (depthIndex == 2) {
+                    translateY = (2.0 - animValue) * 18.0;
+                    scale = 0.88 + (animValue * 0.06);
+                  } else if (depthIndex == 3) {
+                    translateY = (3.0 - animValue) * 18.0;
+                    scale = 0.82 + (animValue * 0.06);
+                  }
                 }
 
                 return Positioned(
                   top: translateY,
                   left: 0,
                   right: 0,
-                  child: AnimatedContainer(
-                    duration: _dragOffsetY == 0.0 ? const Duration(milliseconds: 300) : Duration.zero,
-                    curve: Curves.easeOutCubic,
-                    child: Transform(
-                      alignment: Alignment.topCenter,
-                      transform: Matrix4.identity()
-                        ..setEntry(3, 2, 0.0012)
-                        ..rotateX(rotationX)
-                        ..scaleByDouble(scale, scale, 1.0, 1.0),
-                      child: Opacity(
-                        opacity: opacity,
-                        child: GestureDetector(
-                          onTap: () {
-                            if (isTopCard) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => DeviceDetailScreen(
-                                    initialLevel: widget.currentLevel,
-                                    onStartWorkout: widget.onStartWorkout,
-                                  ),
+                  child: Transform(
+                    alignment: Alignment.topCenter,
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.0015)
+                      ..rotateX(rotationX)
+                      ..scale(scale, scale),
+                    child: Opacity(
+                      opacity: opacity,
+                      child: GestureDetector(
+                        onTap: () {
+                          if (depthIndex == 0) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DeviceDetailScreen(
+                                  initialLevel: widget.currentLevel,
+                                  onStartWorkout: widget.onStartWorkout,
                                 ),
-                              );
-                            } else {
-                              setState(() {
-                                _activeCardIndex = deviceIndex;
-                                _dragOffsetY = 0.0;
-                              });
-                            }
-                          },
-                          child: _buildSingleDeckCard(context, item),
+                              ),
+                            );
+                          } else {
+                            setState(() {
+                              _activeCardIndex = deviceIndex;
+                              _dragOffsetY = 0.0;
+                            });
+                          }
+                        },
+                        child: _buildSingleDeckCard(
+                          context,
+                          item,
+                          isDark,
+                          isFrontCard: depthIndex == (_isTransitioning ? 1 : 0),
                         ),
                       ),
                     ),
                   ),
                 );
-              }),
+              }).toList(),
             ),
           ),
         ),
@@ -300,12 +416,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           children: List.generate(totalCards, (index) {
             final isSelected = index == _activeCardIndex;
             return AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
+              duration: const Duration(milliseconds: 250),
               margin: const EdgeInsets.symmetric(horizontal: 3),
               width: isSelected ? 8 : 5,
               height: isSelected ? 8 : 5,
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.darkCard : AppColors.secondaryText.withValues(alpha: 0.3),
+                color: isSelected
+                    ? (isDark ? AppColors.mint : AppColors.darkCard)
+                    : (isDark ? Colors.white30 : AppColors.secondaryText.withValues(alpha: 0.3)),
                 shape: BoxShape.circle,
               ),
             );
@@ -316,11 +434,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildSingleDeckCard(BuildContext context, HeroDeviceItem item) {
+  Widget _buildSingleDeckCard(BuildContext context, HeroDeviceItem item, bool isDark, {bool isFrontCard = false}) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        // Background Layered Sheet Top Edge Peeking Out (Card Folding Deck visual)
+        // Background Layered Sheet Top Edge Peeking Out
         Positioned(
           top: -12,
           left: 18,
@@ -343,9 +461,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             borderRadius: BorderRadius.circular(28.0),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.25),
-                blurRadius: 24,
-                offset: const Offset(0, 10),
+                color: Colors.black.withValues(alpha: isFrontCard ? 0.38 : 0.2),
+                blurRadius: isFrontCard ? 30 : 16,
+                offset: Offset(0, isFrontCard ? 14 : 6),
               ),
             ],
           ),
@@ -489,17 +607,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildFloatingBottomBar(BuildContext context) {
+  Widget _buildFloatingBottomBar(BuildContext context, bool isDark) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: AppColors.darkCard,
+        color: isDark ? const Color(0xFF1B1B1E) : AppColors.darkCard,
         borderRadius: BorderRadius.circular(30),
+        border: isDark ? Border.all(color: Colors.white.withValues(alpha: 0.12)) : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -513,11 +632,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             child: Container(
               width: 42,
               height: 42,
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.mint : Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.sports_rounded, color: AppColors.darkCard, size: 18),
+              child: Icon(Icons.sports_rounded, color: AppColors.darkCard, size: 18),
             ),
           ),
           GestureDetector(
